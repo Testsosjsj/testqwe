@@ -7,6 +7,7 @@
     <title>Unity Web Player | Scissors Paper Stone</title>
     <link rel="shortcut icon" href="TemplateData/favicon.ico">
     <link rel="stylesheet" href="TemplateData/style.css">
+    <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
       html, body {
@@ -17,6 +18,7 @@
         overflow: hidden;
         background-color: #000;
       }
+      /* Скрываем логотипы Unity */
       #unity-logo,
       #unity-logo-title-footer,
       #unity-footer {
@@ -29,14 +31,12 @@
         top: 0;
         left: 0;
         overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
         background-color: #000;
       }
       #unity-canvas {
+        width: 100% !important;
+        height: 100% !important;
         display: block;
-        margin: 0 auto;
       }
     </style>
   </head>
@@ -58,7 +58,7 @@
     </div>
     <script>
       var canvas = document.querySelector("#unity-canvas");
-      var unityInstance = null;
+      var unityInstance = null; // Сохраняем инстанс для передачи initData
 
       function unityShowBanner(msg, type) {
         var warningBanner = document.querySelector("#unity-warning");
@@ -79,6 +79,7 @@
         updateBannerVisibility();
       }
 
+      // Функция для передачи initData в Unity
       function sendInitDataToUnity() {
         try {
           const tg = window.Telegram && window.Telegram.WebApp;
@@ -116,6 +117,7 @@
       };
 
       if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        // Mobile device style: fill the whole browser client area with the game canvas
         var meta = document.createElement('meta');
         meta.name = 'viewport';
         meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
@@ -123,31 +125,9 @@
         document.querySelector("#unity-container").className = "unity-mobile";
         canvas.className = "unity-mobile";
       } else {
-        function setCanvasSize() {
-          const aspectRatio = 1080 / 1920;
-          const availableWidth = window.innerWidth;
-          const availableHeight = window.innerHeight;
-          
-          let canvasWidth, canvasHeight;
-          
-          // Масштабируем так, чтобы заполнить максимум пространства
-          if (availableWidth / availableHeight > aspectRatio) {
-            // Широкое окно - заполняем по высоте
-            canvasHeight = availableHeight;
-            canvasWidth = canvasHeight * aspectRatio;
-          } else {
-            // Узкое окно - заполняем по ширине
-            canvasWidth = availableWidth;
-            canvasHeight = canvasWidth / aspectRatio;
-          }
-          
-          canvas.style.width = canvasWidth + "px";
-          canvas.style.height = canvasHeight + "px";
-          canvas.style.margin = "0 auto";
-        }
-        
-        setCanvasSize();
-        window.addEventListener('resize', setCanvasSize);
+        // Desktop: растягиваем canvas на весь экран без полос
+        canvas.style.width = "100%";
+        canvas.style.height = "100%";
       }
 
       document.querySelector("#unity-loading-bar").style.display = "block";
@@ -158,20 +138,23 @@
         createUnityInstance(canvas, config, (progress) => {
           document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
               }).then((instance) => {
-                unityInstance = instance;
+                unityInstance = instance; // Сохраняем инстанс
                 document.querySelector("#unity-loading-bar").style.display = "none";
                 document.querySelector("#unity-fullscreen-button").onclick = () => {
                   unityInstance.SetFullscreen(1);
                 };
 
+                // Инициализация Telegram WebApp после загрузки Unity
                 try {
                   const tg = window.Telegram && window.Telegram.WebApp;
                   if (tg) {
                     tg.ready();
                     tg.expand();
                     console.log('Telegram WebApp initialized');
-                    setTimeout(sendInitDataToUnity, 100);
-                    setTimeout(sendInitDataToUnity, 500);
+                    
+                    // Передаём initData в Unity после загрузки
+                    setTimeout(sendInitDataToUnity, 100); // Небольшая задержка для полной инициализации Unity
+                    setTimeout(sendInitDataToUnity, 500); // Резервная попытка
                   } else {
                     console.warn('Telegram WebApp API not available (probably not running in Telegram)');
                   }
