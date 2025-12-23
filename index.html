@@ -36,9 +36,7 @@
       }
       #unity-canvas {
         display: block;
-        width: 100% !important;
-        height: 100% !important;
-        object-fit: contain;
+        margin: 0 auto;
       }
     </style>
   </head>
@@ -125,8 +123,31 @@
         document.querySelector("#unity-container").className = "unity-mobile";
         canvas.className = "unity-mobile";
       } else {
-        // Убираем функцию setCanvasSize для десктопа
-        // Canvas теперь займет 100% ширины и высоты с object-fit: contain
+        function setCanvasSize() {
+          const aspectRatio = 1080 / 1920;
+          const availableWidth = window.innerWidth;
+          const availableHeight = window.innerHeight;
+          
+          let canvasWidth, canvasHeight;
+          
+          // Масштабируем так, чтобы заполнить максимум пространства
+          if (availableWidth / availableHeight > aspectRatio) {
+            // Широкое окно - заполняем по высоте
+            canvasHeight = availableHeight;
+            canvasWidth = canvasHeight * aspectRatio;
+          } else {
+            // Узкое окно - заполняем по ширине
+            canvasWidth = availableWidth;
+            canvasHeight = canvasWidth / aspectRatio;
+          }
+          
+          canvas.style.width = canvasWidth + "px";
+          canvas.style.height = canvasHeight + "px";
+          canvas.style.margin = "0 auto";
+        }
+        
+        setCanvasSize();
+        window.addEventListener('resize', setCanvasSize);
       }
 
       document.querySelector("#unity-loading-bar").style.display = "block";
