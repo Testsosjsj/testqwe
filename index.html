@@ -79,26 +79,49 @@
         updateBannerVisibility();
       }
 
+      // Флаг для предотвращения повторных вызовов sendInitDataToUnity
+      var initDataSent = false;
+      var initDataRetryCount = 0;
+      var maxRetries = 3; // Максимум 3 попытки
+
       // Функция для передачи initData в Unity
       function sendInitDataToUnity() {
+        // Защита от повторных вызовов
+        if (initDataSent) {
+          console.log('initData already sent to Unity, ignoring duplicate call');
+          return;
+        }
+
         try {
           const tg = window.Telegram && window.Telegram.WebApp;
           if (tg && tg.initData && unityInstance) {
             const initData = tg.initData;
-            console.log('Sending initData to Unity:', initData);
+            console.log('Sending initData to Unity:', initData.substring(0, 50) + '...');
+            // Отправляем initData в Unity метод ReceiveInitDataFromTelegram
             unityInstance.SendMessage('ApiClient', 'ReceiveInitDataFromTelegram', initData);
+            initDataSent = true; // Помечаем, что данные отправлены
           } else {
             if (!tg) {
               console.warn('Telegram WebApp not available');
+              initDataSent = true; // Не будем повторять, если Telegram недоступен
             } else if (!tg.initData) {
               console.warn('Telegram initData is empty');
+              initDataSent = true; // Не будем повторять, если initData пустой
             } else if (!unityInstance) {
-              console.warn('Unity instance not ready yet, will retry...');
-              setTimeout(sendInitDataToUnity, 500);
+              // Повторяем попытку только ограниченное количество раз
+              if (initDataRetryCount < maxRetries) {
+                initDataRetryCount++;
+                console.warn('Unity instance not ready yet, will retry... (' + initDataRetryCount + '/' + maxRetries + ')');
+                setTimeout(sendInitDataToUnity, 500);
+              } else {
+                console.error('Unity instance not ready after ' + maxRetries + ' retries, giving up');
+                initDataSent = true; // Прекращаем попытки после максимального количества
+              }
             }
           }
         } catch (e) {
           console.error('Error sending initData to Unity:', e);
+          initDataSent = true; // Помечаем как отправленное, чтобы не повторять при ошибке
         }
       }
 
@@ -152,9 +175,8 @@
                     tg.expand();
                     console.log('Telegram WebApp initialized');
                     
-                    // Передаём initData в Unity после загрузки
-                    setTimeout(sendInitDataToUnity, 100); // Небольшая задержка для полной инициализации Unity
-                    setTimeout(sendInitDataToUnity, 500); // Резервная попытка
+                    // Передаём initData в Unity после загрузки (одна попытка, функция сама повторит при необходимости)
+                    setTimeout(sendInitDataToUnity, 500); // Задержка для полной инициализации Unity
                   } else {
                     console.warn('Telegram WebApp API not available (probably not running in Telegram)');
                   }
