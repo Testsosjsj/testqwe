@@ -224,12 +224,12 @@
           }
           console.log('[HTML] ========== Telegram WebApp Initialization END ==========');
         }).catch((message) => {
-          console.error('[HTML] ❌ Unity instance creation failed:', message);
+          console.error('[HTML] Unity instance creation failed:', message);
           alert(message);
         });
       };
       script.onerror = () => {
-        console.error('[HTML] ❌ Failed to load Unity loader script:', loaderUrl);
+        console.error('[HTML] Failed to load Unity loader script:', loaderUrl);
       };
       document.body.appendChild(script);
     </script>
