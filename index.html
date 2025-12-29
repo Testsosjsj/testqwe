@@ -96,13 +96,60 @@
           const tg = window.Telegram && window.Telegram.WebApp;
           if (tg && tg.initData && unityInstance) {
             const initData = tg.initData;
+            console.log('[Telegram] ========== Sending Data to Unity START ==========');
             console.log('[Telegram] Sending initData to Unity');
             console.log('[Telegram] initData length:', initData.length);
             console.log('[Telegram] initData preview:', initData.substring(0, 100) + '...');
+            
+            // Получаем startParam отдельно (основной способ для /startapp)
+            let startParam = null;
+            let startParamSource = null;
+            
+            // Способ 1: Telegram.WebApp.startParam (основной для /startapp)
+            if (tg.startParam) {
+              startParam = tg.startParam;
+              startParamSource = 'WebApp.startParam';
+              console.log('[Telegram] ✅ Found startParam from WebApp.startParam:', startParam);
+            }
+            
+            // Способ 2: initDataUnsafe.start_param (fallback)
+            if (!startParam && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
+              startParam = tg.initDataUnsafe.start_param;
+              startParamSource = 'initDataUnsafe.start_param';
+              console.log('[Telegram] ✅ Found startParam from initDataUnsafe.start_param:', startParam);
+            }
+            
+            // Способ 3: Парсим из initData строки (дополнительный fallback)
+            if (!startParam) {
+              try {
+                const startParamMatch = initData.match(/start_param=([^&]+)/);
+                if (startParamMatch && startParamMatch[1]) {
+                  startParam = decodeURIComponent(startParamMatch[1]);
+                  startParamSource = 'initData string';
+                  console.log('[Telegram] ✅ Found startParam in initData string:', startParam);
+                }
+              } catch (parseError) {
+                console.warn('[Telegram] ⚠️ Error parsing start_param from initData:', parseError);
+              }
+            }
+            
+            // Отправляем startParam в Unity если найден
+            if (startParam) {
+              console.log('[Telegram] ✅ Sending startParam to Unity:', startParam, '(source:', startParamSource + ')');
+              unityInstance.SendMessage('ApiClient', 'ReceiveStartParamFromTelegram', startParam);
+              console.log('[Telegram] ✅ startParam sent successfully to Unity');
+            } else {
+              console.log('[Telegram] ⚠️ No startParam found');
+              console.log('[Telegram] WebApp.startParam:', tg.startParam);
+              console.log('[Telegram] initDataUnsafe.start_param:', tg.initDataUnsafe && tg.initDataUnsafe.start_param);
+              console.log('[Telegram] ⚠️ Referral link will not work without startParam!');
+            }
+            
             // Отправляем initData в Unity метод ReceiveInitDataFromTelegram
             unityInstance.SendMessage('ApiClient', 'ReceiveInitDataFromTelegram', initData);
             initDataSent = true; // Помечаем, что данные отправлены
-            console.log('[Telegram] initData sent successfully to Unity');
+            console.log('[Telegram] ✅ initData sent successfully to Unity');
+            console.log('[Telegram] ========== Sending Data to Unity END ==========');
           } else {
             if (!tg) {
               console.warn('[Telegram] Telegram WebApp not available');
@@ -196,6 +243,17 @@
                     console.log('[HTML] Telegram initData length:', tg.initData ? tg.initData.length : 0);
                     if (tg.initData) {
                       console.log('[HTML] Telegram initData preview:', tg.initData.substring(0, 100) + '...');
+                    }
+                    console.log('[HTML] Telegram startParam available:', !!tg.startParam);
+                    if (tg.startParam) {
+                      console.log('[HTML] ✅ Telegram startParam:', tg.startParam);
+                    } else {
+                      console.log('[HTML] ⚠️ Telegram startParam is empty or undefined');
+                      if (tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
+                        console.log('[HTML] ✅ Found startParam in initDataUnsafe.start_param:', tg.initDataUnsafe.start_param);
+                      } else {
+                        console.log('[HTML] ⚠️ startParam not found in initDataUnsafe either');
+                      }
                     }
                     console.log('[HTML] Unity instance available:', !!unityInstance);
                     console.log('[HTML] window.gameInstance set:', !!window.gameInstance);
