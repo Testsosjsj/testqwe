@@ -86,62 +86,49 @@
 
  
       function sendInitDataToUnity() {
-        // Защита от повторных вызовов
-        if (initDataSent) {
-          console.log('initData already sent to Unity, ignoring duplicate call');
-          return;
-        }
+        console.log("🔥 !!! NEW VERSION LOADED !!! 🔥"); // Если этой строки нет в логах - чисти кеш!
+        
+        if (initDataSent) return;
 
         try {
           const tg = window.Telegram && window.Telegram.WebApp;
           
-          // Проверяем готовность Unity и наличие TG
           if (tg && unityInstance) {
-            
-            // 1. Берем исходную строку initData
             let initDataToSend = tg.initData || "";
-
-            // 2. ФИКС: Проверяем, есть ли startParam (рефка) отдельно
-            // и нет ли её уже внутри строки (чтобы не дублировать)
+            
+            // --- НАЧАЛО ФИКСА ---
+            // Если в initData нет start_param, но он есть в tg.startParam -> добавляем вручную
             if (tg.startParam && initDataToSend.indexOf('start_param=') === -1) {
-                console.log('[JS Fix] Found missing start_param: ' + tg.startParam);
+                console.log('✅ [JS Fix] Нашел рефку: ' + tg.startParam);
+                console.log('✏️ [JS Fix] Приклеиваю её к initData...');
                 
-                // Если строка не пустая, добавляем амперсанд
                 if (initDataToSend.length > 0) {
                     initDataToSend += '&';
                 }
-                // Дописываем параметр вручную
                 initDataToSend += 'start_param=' + tg.startParam;
+            } else {
+                console.log('ℹ️ [JS Fix] Рефка не нужна или уже есть. startParam: ', tg.startParam);
             }
+            // --- КОНЕЦ ФИКСА ---
 
-            console.log('[Telegram] Sending initData to Unity');
-            console.log('[Telegram] initData length:', initDataToSend.length);
-            
-            // Отправляем модифицированную строку в Unity
+            console.log('[Telegram] Отправляю в Unity строку длиной: ', initDataToSend.length);
             unityInstance.SendMessage('ApiClient', 'ReceiveInitDataFromTelegram', initDataToSend);
-            
-            initDataSent = true; // Помечаем, что данные отправлены
-            console.log('[Telegram] initData sent successfully to Unity');
+            initDataSent = true; 
             
           } else {
-            // Обработка ситуаций, когда что-то не готово
-            if (!tg) {
-              console.warn('[Telegram] Telegram WebApp not available');
-              initDataSent = true; // Не будем повторять, если Telegram недоступен
-            } else if (!unityInstance) {
-              // Unity еще грузится
+            // Если Unity или TG не готовы - пробуем позже
+            if (!tg) initDataSent = true; 
+            else if (!unityInstance) {
               if (initDataRetryCount < maxRetries) {
                 initDataRetryCount++;
-                console.warn('[Telegram] Unity instance not ready yet, will retry... (' + initDataRetryCount + '/' + maxRetries + ')');
                 setTimeout(sendInitDataToUnity, 500);
               } else {
-                console.error('[Telegram] Unity instance not ready after ' + maxRetries + ' retries, giving up');
                 initDataSent = true; 
               }
             }
           }
         } catch (e) {
-          console.error('[Telegram] Error sending initData to Unity:', e);
+          console.error('[Telegram] Error:', e);
           initDataSent = true; 
         }
       }
